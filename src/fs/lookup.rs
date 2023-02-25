@@ -1,11 +1,11 @@
 use crate::controller::Item;
-use crate::{FS, TTL};
-use fuser::{Filesystem, ReplyEntry, Request};
+use crate::{get, FS, TTL};
+use fuser::{ReplyEntry, Request};
 use libc::{ENOENT, ENOTDIR};
 use std::ffi::OsStr;
 
 pub fn lookup(_req: &Request, parent: u64, name: &OsStr, reply: ReplyEntry) {
-    let fs = FS.lock().unwrap();
+    let fs = get!(FS);
     let item = fs.get(&parent);
     match item {
         Some(item) => match item {

@@ -1,10 +1,10 @@
 use crate::controller::Item;
-use crate::FS;
+use crate::{get, FS};
 use fuser::{FileType, ReplyDirectory, Request};
 use libc::ENOENT;
 
 pub fn readdir(_req: &Request, ino: u64, _fh: u64, offset: i64, mut reply: ReplyDirectory) {
-    let fs = FS.lock().unwrap();
+    let fs = get!(FS);
 
     match fs.get(&ino) {
         Some(x) => match x {

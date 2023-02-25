@@ -3,6 +3,8 @@ use lazy_static::lazy_static;
 use fuser::FileAttr;
 use fuser::FileType;
 
+use serde::{Deserialize, Serialize};
+
 use std::collections::HashMap;
 use std::sync::Mutex;
 use std::time::SystemTime;
@@ -11,11 +13,13 @@ lazy_static! {
     pub static ref FS: Mutex<HashMap<u64, Item>> = Mutex::new(HashMap::new());
 }
 
+#[derive(Clone, Serialize, Deserialize)]
 pub enum Item {
     File(File),
     Directory(Directory),
 }
 
+#[derive(Clone, Serialize, Deserialize)]
 pub struct File {
     pub size: u64,
     // this is the message id were the contents is in
@@ -24,6 +28,7 @@ pub struct File {
     pub attr: Attr,
 }
 
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Directory {
     // all the inodes of the inner items
     pub files: Vec<u64>,
@@ -31,7 +36,7 @@ pub struct Directory {
     pub attr: Attr,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Attr {
     pub ino: u64,
     pub parent: u64,
@@ -45,43 +50,38 @@ pub struct Attr {
     pub gid: u32,
 }
 
-#[macro_export]
 macro_rules! to_FileAttr {
-    ( $( $self:expr,  $item:expr ),* ) => {
-        {
-            $(
-                FileAttr {
-                    ino: $item.attr.ino,
-                    size: match $self {
-                        Item::File(x) => x.size,
-                        Item::Directory(_) => 0,
-                    },
-                    blocks: match $self {
-                        Item::File(x) => (x.size/512)+1,
-                        Item::Directory(_) => 0,
-                    },
-                    atime: $item.attr.last_access,
-                    mtime: $item.attr.last_modification,
-                    ctime: $item.attr.last_change,
-                    crtime: $item.attr.creation_time,
-                    kind: match $self {
-                        Item::File(_) => FileType::RegularFile,
-                        Item::Directory(_) => FileType::Directory,
-                    },
-                    perm: $item.attr.permissions,
-                    nlink: match $self {
-                        Item::File(_) => 1,
-                        Item::Directory(x) => (x.files.len()+1) as u32
-                    },
-                    uid: $item.attr.uid,
-                    gid: $item.attr.gid,
-                    rdev: 0,
-                    flags: 0,
-                    blksize: 512,
-                }
-            )*
+    ( $self:expr,  $item:expr ) => {{
+        FileAttr {
+            ino: $item.attr.ino,
+            size: match $self {
+                Item::File(x) => x.size,
+                Item::Directory(_) => 0,
+            },
+            blocks: match $self {
+                Item::File(x) => (x.size / 512) + 1,
+                Item::Directory(_) => 0,
+            },
+            atime: $item.attr.last_access,
+            mtime: $item.attr.last_modification,
+            ctime: $item.attr.last_change,
+            crtime: $item.attr.creation_time,
+            kind: match $self {
+                Item::File(_) => FileType::RegularFile,
+                Item::Directory(_) => FileType::Directory,
+            },
+            perm: $item.attr.permissions,
+            nlink: match $self {
+                Item::File(_) => 1,
+                Item::Directory(x) => (x.files.len() + 1) as u32,
+            },
+            uid: $item.attr.uid,
+            gid: $item.attr.gid,
+            rdev: 0,
+            flags: 0,
+            blksize: 512,
         }
-    };
+    }};
 }
 
 impl Item {
