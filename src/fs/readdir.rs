@@ -16,11 +16,8 @@ pub fn readdir(_req: &Request, ino: u64, _fh: u64, offset: i64, mut reply: Reply
                 ];
 
                 for i in x.files.clone().into_iter() {
-                    match fs.get(&i) {
-                        Some(x) => {
-                            entries.push((x.attr().ino, x.to_FileAttr().kind, x.attr().name));
-                        }
-                        None => {}
+                    if let Some(x) = fs.get(&i) {
+                        entries.push((x.attr().ino, x.to_FileAttr().kind, x.attr().name));
                     }
                 }
                 for (i, entry) in entries.into_iter().enumerate().skip(offset as usize) {

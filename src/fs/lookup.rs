@@ -12,15 +12,12 @@ pub fn lookup(_req: &Request, parent: u64, name: &OsStr, reply: ReplyEntry) {
             Item::File(_) => reply.error(ENOTDIR),
             Item::Directory(item) => {
                 for i in item.files.clone().into_iter() {
-                    match fs.get(&i) {
-                        Some(inner) => {
-                            if inner.attr().name.as_str() == name.to_str().unwrap_or("") {
-                                reply.entry(&TTL, &inner.to_FileAttr(), 0);
-                                return;
-                            }
+                    if let Some(inner) = fs.get(&i) {
+                        if inner.attr().name.as_str() == name.to_str().unwrap_or("") {
+                            reply.entry(&TTL, &inner.to_FileAttr(), 0);
+                            return;
                         }
-                        None => {}
-                    };
+                    }
                 }
                 reply.error(ENOENT);
             }

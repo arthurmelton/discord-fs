@@ -97,7 +97,7 @@ fn main() {
             Ok(x) => {
                 let mut message_id = MESSAGE_ID.lock().unwrap();
                 *message_id = x;
-                drop(x);
+                drop(message_id);
                 let attachment = webhook::get_attachment::get_attachment(get!(MESSAGE_ID));
                 let mut fs = FS.lock().unwrap();
                 *fs = bincode::deserialize(
@@ -156,8 +156,7 @@ fn main() {
                 .parse::<u64>()
                 .unwrap();
             println!(
-                "Next time you run the program pass this as the message-token: {}",
-                message_id
+                "Next time you run the program pass this as the message-token: {message_id}"
             );
             drop(message_id);
             webhook::update_controller::update_controller();
@@ -178,7 +177,7 @@ fn main() {
 }
 
 fn error(msg: &str) {
-    eprint!("{}", msg);
+    eprint!("{msg}");
     std::process::exit(1);
 }
 

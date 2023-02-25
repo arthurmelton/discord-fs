@@ -85,6 +85,7 @@ macro_rules! to_FileAttr {
 }
 
 impl Item {
+    #[allow(non_snake_case)]
     pub fn to_FileAttr(&self) -> FileAttr {
         match self {
             Item::File(x) => to_FileAttr!(self, x),
