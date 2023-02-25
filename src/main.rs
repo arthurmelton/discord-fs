@@ -99,12 +99,15 @@ fn main() {
                 *message_id = x;
                 drop(message_id);
                 let attachment = webhook::get_attachment::get_attachment(get!(MESSAGE_ID));
+                if attachment.is_none() {
+                    error("The message token you provided did not work ;(");
+                }
                 let mut fs = FS.lock().unwrap();
                 *fs = bincode::deserialize(
                     &reqwest::blocking::get(format!(
                         "https://cdn.discordapp.com/attachments/{}/{}/discord-fs",
                         get!(CHANNEL_ID),
-                        attachment
+                        attachment.unwrap()
                     ))
                     .unwrap()
                     .bytes()
