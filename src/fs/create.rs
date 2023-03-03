@@ -1,11 +1,11 @@
 use crate::controller::{Attr, File, Item};
 use crate::fs::access::check_access;
-use crate::{get, get_mut, webhook, EDIT_TIMES, FS, TTL, WEBHOOK};
+use crate::{get, get_mut, webhook, FS, TTL, WEBHOOK};
 use fuser::{ReplyCreate, Request};
 use libc::EACCES;
 use std::ffi::OsStr;
 use std::time::SystemTime;
-
+use crate::send;
 
 pub fn create(
     req: &Request<'_>,
@@ -73,15 +73,12 @@ pub fn make_empty() -> Option<(u64, u64)> {
 
 pub fn make(content: Vec<u8>) -> Option<(u64, u64)> {
     let client = reqwest::blocking::Client::new();
-    get_mut!(EDIT_TIMES).update();
-    let json = client
+    let json = send!(client
         .post(get!(WEBHOOK))
         .multipart(reqwest::blocking::multipart::Form::new().part(
             "files[0]",
-            reqwest::blocking::multipart::Part::bytes(content).file_name("discord-fs"),
-        ))
-        .send()
-        .ok()?
+            reqwest::blocking::multipart::Part::bytes(content.clone()).file_name("discord-fs"),
+        )), true)
         .json::<serde_json::Value>()
         .ok()?;
     Some((json

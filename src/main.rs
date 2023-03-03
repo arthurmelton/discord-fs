@@ -7,6 +7,7 @@ use fuser::{
 };
 use lazy_static::lazy_static;
 use libc::{getegid, geteuid};
+use reqwest::blocking::Client;
 use std::ffi::OsStr;
 use std::sync::Mutex;
 use std::time::{Duration, SystemTime};
@@ -29,8 +30,14 @@ lazy_static! {
     pub static ref CHANNEL_ID: Mutex<u64> = Mutex::new(0);
     pub static ref WEBHOOK: Mutex<String> = Mutex::new("".to_string());
 }
+
 const TTL: Duration = Duration::from_secs(0); // 1 second
 const FILE_SIZE: u64 = (7.5 * 1024.0 * 1024.0) as u64;
+static APP_USER_AGENT: &str = concat!(
+    env!("CARGO_PKG_NAME"),
+    "/",
+    env!("CARGO_PKG_VERSION"),
+);
 
 pub struct DiscordFS;
 
@@ -209,13 +216,13 @@ fn main() {
                 if attachment.is_none() {
                     error("The message token you provided did not work ;(");
                 }
+                let client = Client::new();
                 *get_mut!(FS) = bincode::deserialize(
-                    &reqwest::blocking::get(format!(
+                    &send!(client.get(format!(
                         "https://cdn.discordapp.com/attachments/{}/{}/discord-fs",
                         get!(CHANNEL_ID),
                         attachment.unwrap()
-                    ))
-                    .unwrap()
+                    )), false)
                     .bytes()
                     .unwrap(),
                 )

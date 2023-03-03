@@ -2,7 +2,7 @@ use crate::controller::Item;
 use crate::fs::access::check_access;
 use crate::fs::create::make;
 use crate::webhook::update::update_msg;
-use crate::{get, get_mut, CHANNEL_ID, EDIT_TIMES, FILE_SIZE, FS, WEBHOOK};
+use crate::{get, get_mut, CHANNEL_ID, FILE_SIZE, FS, WEBHOOK};
 use fuser::{ReplyWrite, Request};
 use libc::{EACCES, ENOENT, ESPIPE};
 use std::time::{SystemTime, Duration};
@@ -11,6 +11,7 @@ use lazy_static::lazy_static;
 use std::sync::Mutex;
 use std::collections::HashMap;
 use std::thread;
+use crate::send;
 
 lazy_static! {
    pub static ref WRITE_UPDATES: Mutex<HashMap<u64, Vec<Update>>> = Mutex::new(HashMap::new());
@@ -116,18 +117,16 @@ pub fn write_files() {
                 let mut new_files = x.message[..offset_file as usize + 1].to_vec();
                 for i in &x.message[offset_file as usize + 1..] {
                     let client = reqwest::blocking::Client::new();
-                    get_mut!(EDIT_TIMES).update();
-                    client
-                        .delete(format!("{}/messages/{}", get!(WEBHOOK), i.0))
-                        .send()
-                        .unwrap();
+                    send!(client
+                        .delete(format!("{}/messages/{}", get!(WEBHOOK), i.0)), true
+                    );
                 }
-                let mut part = reqwest::blocking::get(format!(
+                let client = reqwest::blocking::Client::new();
+                let mut part = send!(client.get(format!(
                     "https://cdn.discordapp.com/attachments/{}/{}/discord-fs",
                     get!(CHANNEL_ID),
                     new_files.last().unwrap().1
-                ))
-                .unwrap()
+                )), false)
                 .bytes()
                 .unwrap()[..offset_location as usize]
                     .to_vec();

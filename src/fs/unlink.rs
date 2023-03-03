@@ -1,10 +1,11 @@
 use crate::controller::Item;
 use crate::fs::access::check_access;
 use crate::webhook::update_controller::update_controller;
-use crate::{get, get_mut, EDIT_TIMES, FS, WEBHOOK};
+use crate::{get, get_mut, FS, WEBHOOK};
 use fuser::{ReplyEmpty, Request};
 use libc::{EACCES, ENOENT, ENOTDIR};
 use std::ffi::{c_int, OsStr};
+use crate::send;
 
 pub fn unlink(req: &Request<'_>, parent: u64, name: &OsStr, reply: ReplyEmpty) {
     let parent_item = get!(FS).get(&parent).unwrap().clone();
@@ -21,11 +22,9 @@ pub fn unlink(req: &Request<'_>, parent: u64, name: &OsStr, reply: ReplyEmpty) {
             Ok(x) => {
                 for i in get!(FS).get(&x).unwrap().to_file().unwrap().message {
                     let client = reqwest::blocking::Client::new();
-                    get_mut!(EDIT_TIMES).update();
-                    client
-                        .delete(format!("{}/messages/{}", get!(WEBHOOK), i.0))
-                        .send()
-                        .unwrap();
+                    send!(client
+                        .delete(format!("{}/messages/{}", get!(WEBHOOK), i.0)), true
+                    );
                 }
                 get_mut!(FS).remove(&x).unwrap();
                 update_controller();

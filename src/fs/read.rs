@@ -7,6 +7,7 @@ use crate::fs::write::WRITE_UPDATES;
 use std::thread;
 use std::time::Duration;
 use reqwest::header::{HeaderMap, RANGE, HeaderValue};
+use crate::send;
 
 pub fn read(
     req: &Request<'_>,
@@ -58,14 +59,12 @@ pub fn read(
                                     headers.insert(RANGE, HeaderValue::from_str(format!("bytes=-{end_offset}").as_str()).unwrap());
                                 }
                                 let client = reqwest::blocking::Client::new();
-                                let bytes = client.get(format!(
+                                let bytes = send!(client.get(format!(
                                     "https://cdn.discordapp.com/attachments/{}/{}/discord-fs",
                                     get!(CHANNEL_ID),
                                     x.message.get(i).unwrap().1
                                 ))
-                                    .headers(headers)
-                                    .send()
-                                    .unwrap()
+                                    .headers(headers.clone()), false)
                                     .bytes()
                                     .unwrap();
                                 returns.extend(bytes);
