@@ -23,7 +23,7 @@ pub fn unlink(req: &Request<'_>, parent: u64, name: &OsStr, reply: ReplyEmpty) {
                     let client = reqwest::blocking::Client::new();
                     get_mut!(EDIT_TIMES).update();
                     client
-                        .delete(format!("{}/messages/{}", get!(WEBHOOK), i))
+                        .delete(format!("{}/messages/{}", get!(WEBHOOK), i.0))
                         .send()
                         .unwrap();
                 }

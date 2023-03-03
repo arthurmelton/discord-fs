@@ -1,7 +1,6 @@
 use crate::controller::Item;
 use crate::fs::access::check_access;
-use crate::webhook::get_attachment::get_attachment;
-use crate::{get, get_mut, CHANNEL_ID, EDIT_TIMES, FILE_SIZE, FS};
+use crate::{get, get_mut, CHANNEL_ID, FILE_SIZE, FS};
 use fuser::{ReplyData, Request};
 use libc::{EACCES, ENOENT, ESPIPE};
 use crate::fs::write::WRITE_UPDATES;
@@ -41,26 +40,30 @@ pub fn read(
                             y.update_last_access();
                             let offset = offset as u64;
                             let start = (offset / FILE_SIZE) as usize;
-                            let mut end = ((offset + size as u64 / FILE_SIZE) + 1) as usize;
+                            let mut end = (((offset + size as u64) / FILE_SIZE) + 1) as usize;
                             if end > x.message.len() {
                                 end = x.message.len();
                             }
                             let first_offset = offset % FILE_SIZE;
-                            let end_offset = (offset + size as u64) % FILE_SIZE;
+                            let mut end_offset = (offset + size as u64) % FILE_SIZE;
                             let mut returns = Vec::new();
                             for i in start..end {
-                                get_mut!(EDIT_TIMES).update();
                                 let bytes = reqwest::blocking::get(format!(
                                     "https://cdn.discordapp.com/attachments/{}/{}/discord-fs",
                                     get!(CHANNEL_ID),
-                                    get_attachment(*x.message.get(i).unwrap()).unwrap()
+                                    x.message.get(i).unwrap().1
                                 ))
                                 .unwrap()
                                 .bytes()
                                 .unwrap();
-                                if i == start {
+                                if i == end-1 && end_offset > bytes.len() as u64 {
+                                    end_offset = bytes.len() as u64;
+                                }
+                                if i == start && i == end-1 {
+                                    returns.extend(bytes[first_offset as usize..end_offset as usize].to_vec());
+                                } else if i == start {
                                     returns.extend(bytes[first_offset as usize..].to_vec());
-                                } else if i == end {
+                                } else if i == end-1 {
                                     returns.extend(bytes[..end_offset as usize].to_vec());
                                 } else {
                                     returns.extend(bytes);

@@ -22,8 +22,10 @@ pub enum Item {
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct File {
     pub size: u64,
-    // this is the message id were the contents is in
-    pub message: Vec<u64>,
+
+    // first is message id
+    // second is upload id
+    pub message: Vec<(u64, u64)>,
 
     pub attr: Attr,
 }

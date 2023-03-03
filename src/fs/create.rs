@@ -6,6 +6,7 @@ use libc::EACCES;
 use std::ffi::OsStr;
 use std::time::SystemTime;
 
+
 pub fn create(
     req: &Request<'_>,
     parent: u64,
@@ -66,14 +67,14 @@ pub fn next_inode() -> u64 {
     }
 }
 
-pub fn make_empty() -> Option<u64> {
+pub fn make_empty() -> Option<(u64, u64)> {
     make(vec![])
 }
 
-pub fn make(content: Vec<u8>) -> Option<u64> {
+pub fn make(content: Vec<u8>) -> Option<(u64, u64)> {
     let client = reqwest::blocking::Client::new();
     get_mut!(EDIT_TIMES).update();
-    client
+    let json = client
         .post(get!(WEBHOOK))
         .multipart(reqwest::blocking::multipart::Form::new().part(
             "files[0]",
@@ -82,9 +83,16 @@ pub fn make(content: Vec<u8>) -> Option<u64> {
         .send()
         .ok()?
         .json::<serde_json::Value>()
-        .ok()?
+        .ok()?;
+    Some((json
         .get("id")?
         .as_str()?
-        .parse::<u64>()
-        .ok()
+        .parse::<u64>().ok()?,
+        json.get("attachments")?
+        .as_array()?
+        .first()?
+        .get("id")?
+        .as_str()?
+        .parse::<u64>().ok()?
+    ))
 }

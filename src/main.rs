@@ -239,8 +239,8 @@ fn main() {
                 }),
             );
             let id = fs::create::make_empty().unwrap();
-            *get_mut!(MESSAGE_ID) = id;
-            println!("Next time you run the program pass this as the message-token: {id}");
+            *get_mut!(MESSAGE_ID) = id.0;
+            println!("Next time you run the program pass this as the message-token: {}", id.0);
             webhook::update_controller::update_controller();
         }
     }
@@ -279,6 +279,7 @@ macro_rules! get {
 #[macro_export]
 macro_rules! get_mut {
     ( $x:expr ) => {{
+        #[allow(unused_mut)]
         let mut x = $x.lock().unwrap();
         x
     }};

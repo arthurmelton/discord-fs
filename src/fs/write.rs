@@ -1,7 +1,6 @@
 use crate::controller::Item;
 use crate::fs::access::check_access;
 use crate::fs::create::make;
-use crate::webhook::get_attachment::get_attachment;
 use crate::webhook::update::update_msg;
 use crate::{get, get_mut, CHANNEL_ID, EDIT_TIMES, FILE_SIZE, FS, WEBHOOK};
 use fuser::{ReplyWrite, Request};
@@ -119,14 +118,14 @@ pub fn write_files() {
                     let client = reqwest::blocking::Client::new();
                     get_mut!(EDIT_TIMES).update();
                     client
-                        .delete(format!("{}/messages/{}", get!(WEBHOOK), i))
+                        .delete(format!("{}/messages/{}", get!(WEBHOOK), i.0))
                         .send()
                         .unwrap();
                 }
                 let mut part = reqwest::blocking::get(format!(
                     "https://cdn.discordapp.com/attachments/{}/{}/discord-fs",
                     get!(CHANNEL_ID),
-                    get_attachment(*new_files.last().unwrap()).unwrap()
+                    new_files.last().unwrap().1
                 ))
                 .unwrap()
                 .bytes()
@@ -138,7 +137,8 @@ pub fn write_files() {
                 }
                 let mut data_chunks = vec![data[..taken_data].to_vec()];
                 part.extend(data_chunks.first().unwrap());
-                update_msg(*new_files.last().unwrap(), part);
+                let length = new_files.len();
+                new_files[length-1].1 = update_msg(new_files.last().unwrap().0, part).unwrap();
                 while data.len() - taken_data > 0 {
                     if data.len() - taken_data > FILE_SIZE as usize {
                         data_chunks.push(

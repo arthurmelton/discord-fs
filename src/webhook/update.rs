@@ -31,7 +31,7 @@ impl Update {
     }
 }
 
-pub fn update_msg(msg_id: u64, content: Vec<u8>) {
+pub fn update_msg(msg_id: u64, content: Vec<u8>) -> Option<u64> {
     let client = reqwest::blocking::Client::new();
     get_mut!(EDIT_TIMES).update();
     client
@@ -48,5 +48,13 @@ pub fn update_msg(msg_id: u64, content: Vec<u8>) {
                 ),
         )
         .send()
-        .unwrap();
+        .ok()?
+        .json::<serde_json::Value>()
+        .ok()?
+        .get("attachments")?
+        .as_array()?
+        .first()?
+        .get("id")?
+        .as_str()?
+        .parse::<u64>().ok()
 }
