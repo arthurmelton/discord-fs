@@ -9,6 +9,6 @@ Have you ever wanted to have a drive with increadably show read and write speeds
 
 ## Installation
 
-```rs
+```bash
 cargo install --git https://github.com/AMTitan/discord-fs
 ```
