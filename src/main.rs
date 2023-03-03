@@ -146,6 +146,10 @@ impl Filesystem for DiscordFS {
     fn rmdir(&mut self, req: &Request<'_>, parent: u64, name: &OsStr, reply: ReplyEmpty) {
         fs::rmdir::rmdir(req, parent, name, reply);
     }
+    
+    fn destroy(&mut self) {
+        write_files();
+    }
 }
 
 fn main() {
