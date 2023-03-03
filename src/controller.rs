@@ -13,13 +13,13 @@ lazy_static! {
     pub static ref FS: Mutex<HashMap<u64, Item>> = Mutex::new(HashMap::new());
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub enum Item {
     File(File),
     Directory(Directory),
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct File {
     pub size: u64,
     // this is the message id were the contents is in
@@ -28,7 +28,7 @@ pub struct File {
     pub attr: Attr,
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct Directory {
     // all the inodes of the inner items
     pub files: Vec<u64>,
@@ -36,7 +36,7 @@ pub struct Directory {
     pub attr: Attr,
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct Attr {
     pub ino: u64,
     pub parent: u64,
@@ -85,6 +85,13 @@ macro_rules! to_FileAttr {
 }
 
 impl Item {
+    pub fn to_file(&self) -> Option<File> {
+        match self {
+            Item::File(x) => Some((*x).clone()),
+            Item::Directory(_) => None,
+        }
+    }
+
     #[allow(non_snake_case)]
     pub fn to_FileAttr(&self) -> FileAttr {
         match self {
@@ -97,6 +104,20 @@ impl Item {
         match self {
             Item::File(x) => x.attr.clone(),
             Item::Directory(x) => x.attr.clone(),
+        }
+    }
+    
+    pub fn update_last_access(&mut self) {
+        match self {
+            Item::File(ref mut x) => x.attr.last_access = SystemTime::now(),
+            Item::Directory(ref mut x) => x.attr.last_access = SystemTime::now(),
+        }
+    }
+    
+    pub fn update_last_change(&mut self) {
+        match self {
+            Item::File(ref mut x) => x.attr.last_change = SystemTime::now(),
+            Item::Directory(ref mut x) => x.attr.last_change = SystemTime::now(),
         }
     }
 }

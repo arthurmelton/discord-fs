@@ -3,6 +3,8 @@ use std::sync::Mutex;
 use std::thread::sleep;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+use crate::{get, WEBHOOK, get_mut};
+
 lazy_static! {
     pub static ref EDIT_TIMES: Mutex<Update> = Mutex::new(Update::new());
 }
@@ -24,10 +26,28 @@ impl Update {
         if Duration::new(5, 0) > since {
             sleep(Duration::new(5, 0) - since);
         }
-        self.times[0] = self.times[1];
-        self.times[1] = self.times[2];
-        self.times[2] = self.times[3];
-        self.times[3] = self.times[4];
+        self.times.rotate_left(1);
         self.times[4] = SystemTime::now();
     }
+}
+
+pub fn update_msg(msg_id: u64, content: Vec<u8>) {
+    let client = reqwest::blocking::Client::new();
+    get_mut!(EDIT_TIMES).update();
+    client
+        .patch(format!("{}/messages/{}", get!(WEBHOOK), msg_id))
+        .multipart(
+            reqwest::blocking::multipart::Form::new()
+                .part(
+                    "files[0]",
+                    reqwest::blocking::multipart::Part::bytes(content)
+                    .file_name("discord-fs"),
+                )
+                .part(
+                    "payload_json",
+                    reqwest::blocking::multipart::Part::text("{\"attachments\":[]}"),
+                ),
+        )
+        .send()
+        .unwrap();
 }
