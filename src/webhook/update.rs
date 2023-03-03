@@ -23,8 +23,8 @@ impl Update {
 
     pub fn update(&mut self) {
         let since = SystemTime::now().duration_since(self.times[0]).unwrap();
-        if Duration::new(5, 0) > since {
-            sleep(Duration::new(5, 0) - since);
+        if Duration::new(10, 0) > since {
+            sleep(Duration::new(10, 0) - since);
         }
         self.times.rotate_left(1);
         self.times[4] = SystemTime::now();
