@@ -7,6 +7,7 @@ use crate::{get, get_mut, CHANNEL_ID, EDIT_TIMES, FILE_SIZE, FS, WEBHOOK};
 use fuser::{ReplyWrite, Request};
 use libc::{EACCES, ENOENT, ESPIPE};
 use std::time::SystemTime;
+use crate::webhook::update_controller::update_controller;
 
 pub fn write(
     req: &Request<'_>,
@@ -94,4 +95,5 @@ pub fn write(
         }
         None => reply.error(ENOENT),
     }
+    update_controller();
 }
