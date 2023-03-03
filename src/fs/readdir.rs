@@ -1,8 +1,8 @@
 use crate::controller::Item;
+use crate::fs::access::check_access;
 use crate::{get, FS};
 use fuser::{FileType, ReplyDirectory, Request};
-use libc::{ENOENT, EACCES};
-use crate::fs::access::check_access;
+use libc::{EACCES, ENOENT};
 
 pub fn readdir(req: &Request, ino: u64, _fh: u64, offset: i64, mut reply: ReplyDirectory) {
     let fs = get!(FS);
@@ -10,7 +10,14 @@ pub fn readdir(req: &Request, ino: u64, _fh: u64, offset: i64, mut reply: ReplyD
     match fs.get(&ino) {
         Some(x) => {
             let attr = x.attr();
-            if check_access(attr.uid, attr.gid, attr.permissions, req.uid(), req.gid(), 0b100) {
+            if check_access(
+                attr.uid,
+                attr.gid,
+                attr.permissions,
+                req.uid(),
+                req.gid(),
+                0b100,
+            ) {
                 match x {
                     Item::File(_) => reply.error(ENOENT),
                     Item::Directory(x) => {
@@ -32,11 +39,10 @@ pub fn readdir(req: &Request, ino: u64, _fh: u64, offset: i64, mut reply: ReplyD
                         reply.ok();
                     }
                 }
-            }
-            else {
+            } else {
                 reply.error(EACCES);
             }
-        },
+        }
         None => reply.error(ENOENT),
     }
 }

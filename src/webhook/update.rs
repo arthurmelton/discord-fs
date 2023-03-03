@@ -3,7 +3,7 @@ use std::sync::Mutex;
 use std::thread::sleep;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use crate::{get, WEBHOOK, get_mut};
+use crate::{get, get_mut, WEBHOOK};
 
 lazy_static! {
     pub static ref EDIT_TIMES: Mutex<Update> = Mutex::new(Update::new());
@@ -40,8 +40,7 @@ pub fn update_msg(msg_id: u64, content: Vec<u8>) {
             reqwest::blocking::multipart::Form::new()
                 .part(
                     "files[0]",
-                    reqwest::blocking::multipart::Part::bytes(content)
-                    .file_name("discord-fs"),
+                    reqwest::blocking::multipart::Part::bytes(content).file_name("discord-fs"),
                 )
                 .part(
                     "payload_json",

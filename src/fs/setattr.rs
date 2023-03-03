@@ -1,8 +1,8 @@
-use fuser::{Request, TimeOrNow, ReplyAttr};
-use std::time::SystemTime;
+use crate::controller::{Attr, Item};
 use crate::{get_mut, FS, TTL};
-use crate::controller::{Item, Attr};
+use fuser::{ReplyAttr, Request, TimeOrNow};
 use libc::{EACCES, ENOENT};
+use std::time::SystemTime;
 
 macro_rules! update {
     ( $self:expr, $atime:expr, $mtime:expr, $ctime:expr, $crtime:expr, $mode:expr, $uid:expr, $gid:expr ) => {{
@@ -11,7 +11,9 @@ macro_rules! update {
             parent: $self.attr.parent,
             name: $self.attr.name.clone(),
             last_access: to_system_time($atime.unwrap_or(to_TimeOrNow($self.attr.last_access))),
-            last_modification: to_system_time($mtime.unwrap_or(to_TimeOrNow($self.attr.last_modification))),
+            last_modification: to_system_time(
+                $mtime.unwrap_or(to_TimeOrNow($self.attr.last_modification)),
+            ),
             last_change: $ctime.unwrap_or($self.attr.last_change),
             creation_time: $crtime.unwrap_or($self.attr.creation_time),
             permissions: $mode.unwrap_or($self.attr.permissions as u32) as u16,
@@ -21,7 +23,23 @@ macro_rules! update {
     }};
 }
 
-pub fn setattr(req: &Request<'_>, ino: u64, mode: Option<u32>, uid: Option<u32>, gid: Option<u32>, _size: Option<u64>, atime: Option<TimeOrNow>, mtime: Option<TimeOrNow>, ctime: Option<SystemTime>, _fh: Option<u64>, crtime: Option<SystemTime>, _chgtime: Option<SystemTime>, _bkuptime: Option<SystemTime>, _flags: Option<u32>, reply: ReplyAttr) {
+pub fn setattr(
+    req: &Request<'_>,
+    ino: u64,
+    mode: Option<u32>,
+    uid: Option<u32>,
+    gid: Option<u32>,
+    _size: Option<u64>,
+    atime: Option<TimeOrNow>,
+    mtime: Option<TimeOrNow>,
+    ctime: Option<SystemTime>,
+    _fh: Option<u64>,
+    crtime: Option<SystemTime>,
+    _chgtime: Option<SystemTime>,
+    _bkuptime: Option<SystemTime>,
+    _flags: Option<u32>,
+    reply: ReplyAttr,
+) {
     match get_mut!(FS).get_mut(&ino) {
         Some(x) => {
             if vec![0, req.uid()].contains(&x.attr().uid) {
@@ -31,8 +49,7 @@ pub fn setattr(req: &Request<'_>, ino: u64, mode: Option<u32>, uid: Option<u32>,
                     Item::Directory(x) => update!(x, atime, mtime, ctime, crtime, mode, uid, gid),
                 }
                 reply.attr(&TTL, &x.to_FileAttr());
-            }
-            else {
+            } else {
                 reply.error(EACCES);
             }
         }
@@ -43,7 +60,7 @@ pub fn setattr(req: &Request<'_>, ino: u64, mode: Option<u32>, uid: Option<u32>,
 pub fn to_system_time(item: TimeOrNow) -> SystemTime {
     match item {
         TimeOrNow::SpecificTime(x) => x,
-        TimeOrNow::Now => SystemTime::now()
+        TimeOrNow::Now => SystemTime::now(),
     }
 }
 

@@ -1,7 +1,10 @@
 #![allow(clippy::too_many_arguments)]
 
 use clap::{crate_version, Arg, Command};
-use fuser::{Filesystem, MountOption, ReplyAttr, ReplyDirectory, ReplyEntry, Request, ReplyCreate, ReplyEmpty, ReplyData, ReplyWrite, TimeOrNow};
+use fuser::{
+    Filesystem, MountOption, ReplyAttr, ReplyCreate, ReplyData, ReplyDirectory, ReplyEmpty,
+    ReplyEntry, ReplyWrite, Request, TimeOrNow,
+};
 use lazy_static::lazy_static;
 use libc::{getegid, geteuid};
 use std::ffi::OsStr;
@@ -26,7 +29,7 @@ lazy_static! {
     pub static ref WEBHOOK: Mutex<String> = Mutex::new("".to_string());
 }
 const TTL: Duration = Duration::from_secs(0); // 1 second
-const FILE_SIZE: u64 = (7.5*1024.0*1024.0) as u64;
+const FILE_SIZE: u64 = (7.5 * 1024.0 * 1024.0) as u64;
 
 pub struct DiscordFS;
 
@@ -39,38 +42,106 @@ impl Filesystem for DiscordFS {
         fs::getattr::getattr(req, ino, reply);
     }
 
-    fn create(&mut self, req: &Request<'_>, parent: u64, name: &OsStr, mode: u32, umask: u32, flags: i32, reply: ReplyCreate) {
+    fn create(
+        &mut self,
+        req: &Request<'_>,
+        parent: u64,
+        name: &OsStr,
+        mode: u32,
+        umask: u32,
+        flags: i32,
+        reply: ReplyCreate,
+    ) {
         fs::create::create(req, parent, name, mode, umask, flags, reply);
     }
 
     fn readdir(&mut self, req: &Request, ino: u64, fh: u64, offset: i64, reply: ReplyDirectory) {
         fs::readdir::readdir(req, ino, fh, offset, reply);
     }
-    
+
     fn access(&mut self, req: &Request, inode: u64, mask: i32, reply: ReplyEmpty) {
         fs::access::access(req, inode, mask, reply);
     }
 
-    fn read(&mut self, req: &Request<'_>, ino: u64, fh: u64, offset: i64, size: u32, flags: i32, lock_owner: Option<u64>, reply: ReplyData) {
+    fn read(
+        &mut self,
+        req: &Request<'_>,
+        ino: u64,
+        fh: u64,
+        offset: i64,
+        size: u32,
+        flags: i32,
+        lock_owner: Option<u64>,
+        reply: ReplyData,
+    ) {
         fs::read::read(req, ino, fh, offset, size, flags, lock_owner, reply);
     }
 
-    fn write(&mut self, req: &Request<'_>, ino: u64, fh: u64, offset: i64, data: &[u8], write_flags: u32, flags: i32, lock_owner: Option<u64>, reply: ReplyWrite) {
-        fs::write::write(req, ino, fh, offset, data, write_flags, flags, lock_owner, reply);
-    }
-    
-    fn setattr(&mut self, req: &Request<'_>, ino: u64, mode: Option<u32>, uid: Option<u32>, gid: Option<u32>, size: Option<u64>, atime: Option<TimeOrNow>, mtime: Option<TimeOrNow>, ctime: Option<SystemTime>, fh: Option<u64>, crtime: Option<SystemTime>, chgtime: Option<SystemTime>, bkuptime: Option<SystemTime>, flags: Option<u32>, reply: ReplyAttr) {
-        fs::setattr::setattr(req, ino, mode, uid, gid, size, atime, mtime, ctime, fh, crtime, chgtime, bkuptime, flags, reply);
+    fn write(
+        &mut self,
+        req: &Request<'_>,
+        ino: u64,
+        fh: u64,
+        offset: i64,
+        data: &[u8],
+        write_flags: u32,
+        flags: i32,
+        lock_owner: Option<u64>,
+        reply: ReplyWrite,
+    ) {
+        fs::write::write(
+            req,
+            ino,
+            fh,
+            offset,
+            data,
+            write_flags,
+            flags,
+            lock_owner,
+            reply,
+        );
     }
 
-    fn mkdir(&mut self, req: &Request<'_>, parent: u64, name: &OsStr, mode: u32, umask: u32, reply: ReplyEntry) {
+    fn setattr(
+        &mut self,
+        req: &Request<'_>,
+        ino: u64,
+        mode: Option<u32>,
+        uid: Option<u32>,
+        gid: Option<u32>,
+        size: Option<u64>,
+        atime: Option<TimeOrNow>,
+        mtime: Option<TimeOrNow>,
+        ctime: Option<SystemTime>,
+        fh: Option<u64>,
+        crtime: Option<SystemTime>,
+        chgtime: Option<SystemTime>,
+        bkuptime: Option<SystemTime>,
+        flags: Option<u32>,
+        reply: ReplyAttr,
+    ) {
+        fs::setattr::setattr(
+            req, ino, mode, uid, gid, size, atime, mtime, ctime, fh, crtime, chgtime, bkuptime,
+            flags, reply,
+        );
+    }
+
+    fn mkdir(
+        &mut self,
+        req: &Request<'_>,
+        parent: u64,
+        name: &OsStr,
+        mode: u32,
+        umask: u32,
+        reply: ReplyEntry,
+    ) {
         fs::mkdir::mkdir(req, parent, name, mode, umask, reply);
     }
 
     fn unlink(&mut self, req: &Request<'_>, parent: u64, name: &OsStr, reply: ReplyEmpty) {
         fs::unlink::unlink(req, parent, name, reply);
     }
-    
+
     fn rmdir(&mut self, req: &Request<'_>, parent: u64, name: &OsStr, reply: ReplyEmpty) {
         fs::rmdir::rmdir(req, parent, name, reply);
     }
@@ -168,9 +239,7 @@ fn main() {
             );
             let id = fs::create::make_empty().unwrap();
             *get_mut!(MESSAGE_ID) = id;
-            println!(
-                "Next time you run the program pass this as the message-token: {id}"
-            );
+            println!("Next time you run the program pass this as the message-token: {id}");
             webhook::update_controller::update_controller();
         }
     }

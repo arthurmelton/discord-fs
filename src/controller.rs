@@ -106,14 +106,14 @@ impl Item {
             Item::Directory(x) => x.attr.clone(),
         }
     }
-    
+
     pub fn update_last_access(&mut self) {
         match self {
             Item::File(ref mut x) => x.attr.last_access = SystemTime::now(),
             Item::Directory(ref mut x) => x.attr.last_access = SystemTime::now(),
         }
     }
-    
+
     pub fn update_last_change(&mut self) {
         match self {
             Item::File(ref mut x) => x.attr.last_change = SystemTime::now(),

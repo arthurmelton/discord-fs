@@ -1,11 +1,18 @@
 use crate::{get, FS};
-use fuser::{Request, ReplyEmpty};
+use fuser::{ReplyEmpty, Request};
 
 pub fn access(req: &Request, inode: u64, mask: i32, reply: ReplyEmpty) {
     match get!(FS).get(&inode) {
         Some(item) => {
             let attr = item.attr();
-            if check_access(attr.uid, attr.gid, attr.permissions, req.uid(), req.gid(), mask) {
+            if check_access(
+                attr.uid,
+                attr.gid,
+                attr.permissions,
+                req.uid(),
+                req.gid(),
+                mask,
+            ) {
                 reply.ok();
             } else {
                 reply.error(libc::EACCES);

@@ -1,9 +1,9 @@
 use crate::controller::Item;
+use crate::fs::access::check_access;
 use crate::{get, FS, TTL};
 use fuser::{ReplyEntry, Request};
-use libc::{ENOENT, ENOTDIR, EACCES};
+use libc::{EACCES, ENOENT, ENOTDIR};
 use std::ffi::OsStr;
-use crate::fs::access::check_access;
 
 pub fn lookup(req: &Request, parent: u64, name: &OsStr, reply: ReplyEntry) {
     let fs = get!(FS);
@@ -11,7 +11,14 @@ pub fn lookup(req: &Request, parent: u64, name: &OsStr, reply: ReplyEntry) {
     match item {
         Some(item) => {
             let attr = item.attr();
-            if check_access(attr.uid, attr.gid, attr.permissions, req.uid(), req.gid(), 0b100) {
+            if check_access(
+                attr.uid,
+                attr.gid,
+                attr.permissions,
+                req.uid(),
+                req.gid(),
+                0b100,
+            ) {
                 match item {
                     Item::File(_) => reply.error(ENOTDIR),
                     Item::Directory(item) => {
@@ -26,11 +33,10 @@ pub fn lookup(req: &Request, parent: u64, name: &OsStr, reply: ReplyEntry) {
                         reply.error(ENOENT);
                     }
                 }
-            }
-            else {
+            } else {
                 reply.error(EACCES);
             }
-        },
+        }
         None => reply.error(ENOENT),
     }
 }
