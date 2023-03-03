@@ -6,6 +6,7 @@ use libc::{EACCES, ENOENT, ESPIPE};
 use crate::fs::write::WRITE_UPDATES;
 use std::thread;
 use std::time::Duration;
+use reqwest::header::{HeaderMap, RANGE, HeaderValue};
 
 pub fn read(
     req: &Request<'_>,
@@ -40,34 +41,35 @@ pub fn read(
                             y.update_last_access();
                             let offset = offset as u64;
                             let start = (offset / FILE_SIZE) as usize;
-                            let mut end = (((offset + size as u64) / FILE_SIZE) + 1) as usize;
+                            let mut end = (((offset + size as u64 - 1) / FILE_SIZE) + 1) as usize;
                             if end > x.message.len() {
                                 end = x.message.len();
                             }
                             let first_offset = offset % FILE_SIZE;
-                            let mut end_offset = (offset + size as u64) % FILE_SIZE;
+                            let end_offset = (offset + size as u64 - 1) % FILE_SIZE;
                             let mut returns = Vec::new();
                             for i in start..end {
-                                let bytes = reqwest::blocking::get(format!(
+                                let mut headers = HeaderMap::new();
+                                if i == start && i == end-1 {
+                                    headers.insert(RANGE, HeaderValue::from_str(format!("bytes={first_offset}-{end_offset}").as_str()).unwrap());
+                                } else if i == start {
+                                    headers.insert(RANGE, HeaderValue::from_str(format!("bytes={first_offset}-").as_str()).unwrap());
+                                } else if i == end-1 {
+                                    headers.insert(RANGE, HeaderValue::from_str(format!("bytes=-{end_offset}").as_str()).unwrap());
+                                }
+                                let client = reqwest::blocking::Client::new();
+                                let bytes = client.get(format!(
                                     "https://cdn.discordapp.com/attachments/{}/{}/discord-fs",
                                     get!(CHANNEL_ID),
                                     x.message.get(i).unwrap().1
                                 ))
-                                .unwrap()
-                                .bytes()
-                                .unwrap();
-                                if i == end-1 && end_offset > bytes.len() as u64 {
-                                    end_offset = bytes.len() as u64;
-                                }
-                                if i == start && i == end-1 {
-                                    returns.extend(bytes[first_offset as usize..end_offset as usize].to_vec());
-                                } else if i == start {
-                                    returns.extend(bytes[first_offset as usize..].to_vec());
-                                } else if i == end-1 {
-                                    returns.extend(bytes[..end_offset as usize].to_vec());
-                                } else {
-                                    returns.extend(bytes);
-                                }
+                                    .headers(headers)
+                                    .send()
+                                    .unwrap()
+                                    .bytes()
+                                    .unwrap();
+                                returns.extend(bytes);
+
                             }
                             reply.data(&returns);
                         } else {
