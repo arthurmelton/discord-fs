@@ -9,8 +9,8 @@ use lazy_static::lazy_static;
 use libc::{getegid, geteuid};
 use std::ffi::OsStr;
 use std::sync::Mutex;
-use std::time::Duration;
-use std::time::SystemTime;
+use std::time::{Duration, SystemTime};
+use std::thread;
 
 mod controller;
 mod fs;
@@ -18,6 +18,7 @@ mod webhook;
 
 use controller::FS;
 use webhook::update::EDIT_TIMES;
+use fs::write::write_files;
 
 lazy_static! {
     pub static ref USERAGENT: String = format!(
@@ -254,6 +255,12 @@ fn main() {
     if matches.is_present("allow-root") {
         options.push(MountOption::AllowRoot);
     }
+    thread::spawn(|| {
+        loop {
+            write_files();
+            thread::sleep(Duration::from_secs(1));
+        }
+    });
     fuser::mount2(DiscordFS, mountpoint, &options).unwrap();
 }
 

@@ -4,6 +4,9 @@ use crate::webhook::get_attachment::get_attachment;
 use crate::{get, get_mut, CHANNEL_ID, EDIT_TIMES, FILE_SIZE, FS};
 use fuser::{ReplyData, Request};
 use libc::{EACCES, ENOENT, ESPIPE};
+use crate::fs::write::WRITE_UPDATES;
+use std::thread;
+use std::time::Duration;
 
 pub fn read(
     req: &Request<'_>,
@@ -15,6 +18,9 @@ pub fn read(
     _lock_owner: Option<u64>,
     reply: ReplyData,
 ) {
+    while get!(WRITE_UPDATES).get(&ino).is_some() {
+        thread::sleep(Duration::from_secs(1));
+    }
     match get_mut!(FS).get_mut(&ino) {
         Some(y) => {
             let attr = y.attr();
