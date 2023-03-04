@@ -10,16 +10,16 @@ use libc::{getegid, geteuid};
 use reqwest::blocking::Client;
 use std::ffi::OsStr;
 use std::sync::Mutex;
-use std::time::{Duration, SystemTime};
 use std::thread;
+use std::time::{Duration, SystemTime};
 
 mod controller;
 mod fs;
 mod webhook;
 
 use controller::FS;
-use webhook::update::EDIT_TIMES;
 use fs::write::write_files;
+use webhook::update::EDIT_TIMES;
 
 lazy_static! {
     pub static ref USERAGENT: String = format!(
@@ -33,11 +33,7 @@ lazy_static! {
 
 const TTL: Duration = Duration::from_secs(0); // 1 second
 const FILE_SIZE: u64 = (7.5 * 1024.0 * 1024.0) as u64;
-static APP_USER_AGENT: &str = concat!(
-    env!("CARGO_PKG_NAME"),
-    "/",
-    env!("CARGO_PKG_VERSION"),
-);
+static APP_USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"),);
 
 pub struct DiscordFS;
 
@@ -153,7 +149,7 @@ impl Filesystem for DiscordFS {
     fn rmdir(&mut self, req: &Request<'_>, parent: u64, name: &OsStr, reply: ReplyEmpty) {
         fs::rmdir::rmdir(req, parent, name, reply);
     }
-    
+
     fn destroy(&mut self) {
         write_files();
     }
@@ -218,11 +214,14 @@ fn main() {
                 }
                 let client = Client::new();
                 *get_mut!(FS) = bincode::deserialize(
-                    &send!(client.get(format!(
-                        "https://cdn.discordapp.com/attachments/{}/{}/discord-fs",
-                        get!(CHANNEL_ID),
-                        attachment.unwrap()
-                    )), false)
+                    &send!(
+                        client.get(format!(
+                            "https://cdn.discordapp.com/attachments/{}/{}/discord-fs",
+                            get!(CHANNEL_ID),
+                            attachment.unwrap()
+                        )),
+                        false
+                    )
                     .bytes()
                     .unwrap(),
                 )
@@ -251,7 +250,10 @@ fn main() {
             );
             let id = fs::create::make_empty().unwrap();
             *get_mut!(MESSAGE_ID) = id.0;
-            println!("Next time you run the program pass this as the message-token: {}", id.0);
+            println!(
+                "Next time you run the program pass this as the message-token: {}",
+                id.0
+            );
             webhook::update_controller::update_controller();
         }
     }
@@ -266,11 +268,9 @@ fn main() {
     if matches.is_present("allow-root") {
         options.push(MountOption::AllowRoot);
     }
-    thread::spawn(|| {
-        loop {
-            write_files();
-            thread::sleep(Duration::from_secs(1));
-        }
+    thread::spawn(|| loop {
+        write_files();
+        thread::sleep(Duration::from_secs(1));
     });
     fuser::mount2(DiscordFS, mountpoint, &options).unwrap();
 }

@@ -3,8 +3,8 @@ use std::sync::Mutex;
 use std::thread::sleep;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use crate::{get, WEBHOOK};
 use crate::send;
+use crate::{get, WEBHOOK};
 
 lazy_static! {
     pub static ref EDIT_TIMES: Mutex<Update> = Mutex::new(Update::new());
@@ -34,25 +34,30 @@ impl Update {
 
 pub fn update_msg(msg_id: u64, content: Vec<u8>) -> Option<u64> {
     let client = reqwest::blocking::Client::new();
-    send!(client
-        .patch(format!("{}/messages/{}", get!(WEBHOOK), msg_id))
-        .multipart(
-            reqwest::blocking::multipart::Form::new()
-                .part(
-                    "files[0]",
-                    reqwest::blocking::multipart::Part::bytes(content.clone()).file_name("discord-fs"),
-                )
-                .part(
-                    "payload_json",
-                    reqwest::blocking::multipart::Part::text("{\"attachments\":[]}"),
-                ),
-        ), true)
-        .json::<serde_json::Value>()
-        .ok()?
-        .get("attachments")?
-        .as_array()?
-        .first()?
-        .get("id")?
-        .as_str()?
-        .parse::<u64>().ok()
+    send!(
+        client
+            .patch(format!("{}/messages/{}", get!(WEBHOOK), msg_id))
+            .multipart(
+                reqwest::blocking::multipart::Form::new()
+                    .part(
+                        "files[0]",
+                        reqwest::blocking::multipart::Part::bytes(content.clone())
+                            .file_name("discord-fs"),
+                    )
+                    .part(
+                        "payload_json",
+                        reqwest::blocking::multipart::Part::text("{\"attachments\":[]}"),
+                    ),
+            ),
+        true
+    )
+    .json::<serde_json::Value>()
+    .ok()?
+    .get("attachments")?
+    .as_array()?
+    .first()?
+    .get("id")?
+    .as_str()?
+    .parse::<u64>()
+    .ok()
 }

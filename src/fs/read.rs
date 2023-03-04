@@ -1,13 +1,13 @@
 use crate::controller::Item;
 use crate::fs::access::check_access;
+use crate::fs::write::WRITE_UPDATES;
+use crate::send;
 use crate::{get, get_mut, CHANNEL_ID, FILE_SIZE, FS};
 use fuser::{ReplyData, Request};
 use libc::{EACCES, ENOENT, ESPIPE};
-use crate::fs::write::WRITE_UPDATES;
+use reqwest::header::{HeaderMap, HeaderValue, RANGE};
 use std::thread;
 use std::time::Duration;
-use reqwest::header::{HeaderMap, RANGE, HeaderValue};
-use crate::send;
 
 pub fn read(
     req: &Request<'_>,
@@ -51,24 +51,45 @@ pub fn read(
                             let mut returns = Vec::new();
                             for i in start..end {
                                 let mut headers = HeaderMap::new();
-                                if i == start && i == end-1 {
-                                    headers.insert(RANGE, HeaderValue::from_str(format!("bytes={first_offset}-{end_offset}").as_str()).unwrap());
+                                if i == start && i == end - 1 {
+                                    headers.insert(
+                                        RANGE,
+                                        HeaderValue::from_str(
+                                            format!("bytes={first_offset}-{end_offset}").as_str(),
+                                        )
+                                        .unwrap(),
+                                    );
                                 } else if i == start {
-                                    headers.insert(RANGE, HeaderValue::from_str(format!("bytes={first_offset}-").as_str()).unwrap());
-                                } else if i == end-1 {
-                                    headers.insert(RANGE, HeaderValue::from_str(format!("bytes=-{end_offset}").as_str()).unwrap());
+                                    headers.insert(
+                                        RANGE,
+                                        HeaderValue::from_str(
+                                            format!("bytes={first_offset}-").as_str(),
+                                        )
+                                        .unwrap(),
+                                    );
+                                } else if i == end - 1 {
+                                    headers.insert(
+                                        RANGE,
+                                        HeaderValue::from_str(
+                                            format!("bytes=-{end_offset}").as_str(),
+                                        )
+                                        .unwrap(),
+                                    );
                                 }
                                 let client = reqwest::blocking::Client::new();
-                                let bytes = send!(client.get(format!(
+                                let bytes = send!(
+                                    client
+                                        .get(format!(
                                     "https://cdn.discordapp.com/attachments/{}/{}/discord-fs",
                                     get!(CHANNEL_ID),
                                     x.message.get(i).unwrap().1
                                 ))
-                                    .headers(headers.clone()), false)
-                                    .bytes()
-                                    .unwrap();
+                                        .headers(headers.clone()),
+                                    false
+                                )
+                                .bytes()
+                                .unwrap();
                                 returns.extend(bytes);
-
                             }
                             reply.data(&returns);
                         } else {

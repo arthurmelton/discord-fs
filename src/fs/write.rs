@@ -1,20 +1,20 @@
 use crate::controller::Item;
 use crate::fs::access::check_access;
 use crate::fs::create::make;
+use crate::send;
 use crate::webhook::update::update_msg;
+use crate::webhook::update_controller::update_controller;
 use crate::{get, get_mut, CHANNEL_ID, FILE_SIZE, FS, WEBHOOK};
 use fuser::{ReplyWrite, Request};
-use libc::{EACCES, ENOENT, ESPIPE};
-use std::time::{SystemTime, Duration};
-use crate::webhook::update_controller::update_controller;
 use lazy_static::lazy_static;
-use std::sync::Mutex;
+use libc::{EACCES, ENOENT, ESPIPE};
 use std::collections::HashMap;
+use std::sync::Mutex;
 use std::thread;
-use crate::send;
+use std::time::{Duration, SystemTime};
 
 lazy_static! {
-   pub static ref WRITE_UPDATES: Mutex<HashMap<u64, Vec<Update>>> = Mutex::new(HashMap::new());
+    pub static ref WRITE_UPDATES: Mutex<HashMap<u64, Vec<Update>>> = Mutex::new(HashMap::new());
 }
 
 #[derive(Clone, Debug)]
@@ -58,24 +58,25 @@ pub fn write(
                                 Some(x) => {
                                     x.iter().map(|i| i.data.len()).sum::<usize>() as u64 > FILE_SIZE
                                 }
-                                None => false
+                                None => false,
                             } {
                                 thread::sleep(Duration::from_secs(1));
                             }
                             let data = data.to_vec();
                             let mut write_updates = get_mut!(WRITE_UPDATES);
                             match write_updates.get_mut(&ino) {
-                                Some(x) => {
-                                    x.push(Update {
-                                        offset,
-                                        data: data.clone(),
-                                    })
-                                },
+                                Some(x) => x.push(Update {
+                                    offset,
+                                    data: data.clone(),
+                                }),
                                 None => {
-                                    write_updates.insert(ino, vec![Update {
-                                        offset,
-                                        data: data.clone(),
-                                    }]);
+                                    write_updates.insert(
+                                        ino,
+                                        vec![Update {
+                                            offset,
+                                            data: data.clone(),
+                                        }],
+                                    );
                                 }
                             };
                             reply.written(data.len() as u32);
@@ -101,11 +102,8 @@ pub fn write_files() {
                 let mut data = vec![];
                 for i in updates {
                     data.extend(i.data.clone());
-                };
-                updates = vec![Update {
-                    offset,
-                    data
-                }];
+                }
+                updates = vec![Update { offset, data }];
             }
             for update in updates {
                 let offset = update.offset;
@@ -117,16 +115,20 @@ pub fn write_files() {
                 let mut new_files = x.message[..offset_file as usize + 1].to_vec();
                 for i in &x.message[offset_file as usize + 1..] {
                     let client = reqwest::blocking::Client::new();
-                    send!(client
-                        .delete(format!("{}/messages/{}", get!(WEBHOOK), i.0)), true
+                    send!(
+                        client.delete(format!("{}/messages/{}", get!(WEBHOOK), i.0)),
+                        true
                     );
                 }
                 let client = reqwest::blocking::Client::new();
-                let mut part = send!(client.get(format!(
-                    "https://cdn.discordapp.com/attachments/{}/{}/discord-fs",
-                    get!(CHANNEL_ID),
-                    new_files.last().unwrap().1
-                )), false)
+                let mut part = send!(
+                    client.get(format!(
+                        "https://cdn.discordapp.com/attachments/{}/{}/discord-fs",
+                        get!(CHANNEL_ID),
+                        new_files.last().unwrap().1
+                    )),
+                    false
+                )
                 .bytes()
                 .unwrap()[..offset_location as usize]
                     .to_vec();
@@ -137,12 +139,11 @@ pub fn write_files() {
                 let mut data_chunks = vec![data[..taken_data].to_vec()];
                 part.extend(data_chunks.first().unwrap());
                 let length = new_files.len();
-                new_files[length-1].1 = update_msg(new_files.last().unwrap().0, part).unwrap();
+                new_files[length - 1].1 = update_msg(new_files.last().unwrap().0, part).unwrap();
                 while data.len() - taken_data > 0 {
                     if data.len() - taken_data > FILE_SIZE as usize {
-                        data_chunks.push(
-                            data[taken_data..taken_data + FILE_SIZE as usize].to_vec(),
-                        );
+                        data_chunks
+                            .push(data[taken_data..taken_data + FILE_SIZE as usize].to_vec());
                         taken_data += FILE_SIZE as usize;
                     } else {
                         data_chunks.push(data[taken_data..].to_vec());

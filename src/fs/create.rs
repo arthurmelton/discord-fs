@@ -1,11 +1,11 @@
 use crate::controller::{Attr, File, Item};
 use crate::fs::access::check_access;
+use crate::send;
 use crate::{get, get_mut, webhook, FS, TTL, WEBHOOK};
 use fuser::{ReplyCreate, Request};
 use libc::EACCES;
 use std::ffi::OsStr;
 use std::time::SystemTime;
-use crate::send;
 
 pub fn create(
     req: &Request<'_>,
@@ -73,23 +73,25 @@ pub fn make_empty() -> Option<(u64, u64)> {
 
 pub fn make(content: Vec<u8>) -> Option<(u64, u64)> {
     let client = reqwest::blocking::Client::new();
-    let json = send!(client
-        .post(get!(WEBHOOK))
-        .multipart(reqwest::blocking::multipart::Form::new().part(
-            "files[0]",
-            reqwest::blocking::multipart::Part::bytes(content.clone()).file_name("discord-fs"),
-        )), true)
-        .json::<serde_json::Value>()
-        .ok()?;
-    Some((json
-        .get("id")?
-        .as_str()?
-        .parse::<u64>().ok()?,
+    let json = send!(
+        client
+            .post(get!(WEBHOOK))
+            .multipart(reqwest::blocking::multipart::Form::new().part(
+                "files[0]",
+                reqwest::blocking::multipart::Part::bytes(content.clone()).file_name("discord-fs"),
+            )),
+        true
+    )
+    .json::<serde_json::Value>()
+    .ok()?;
+    Some((
+        json.get("id")?.as_str()?.parse::<u64>().ok()?,
         json.get("attachments")?
-        .as_array()?
-        .first()?
-        .get("id")?
-        .as_str()?
-        .parse::<u64>().ok()?
+            .as_array()?
+            .first()?
+            .get("id")?
+            .as_str()?
+            .parse::<u64>()
+            .ok()?,
     ))
 }
