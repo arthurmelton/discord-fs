@@ -32,7 +32,7 @@ lazy_static! {
 }
 
 const TTL: Duration = Duration::from_secs(0);
-const FILE_SIZE: u64 = (7.5 * 1024.0 * 1024.0) as u64;
+const FILE_SIZE: u64 = (24.5 * 1024.0 * 1024.0) as u64;
 static APP_USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"),);
 
 pub struct DiscordFS;
